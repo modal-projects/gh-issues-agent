@@ -4,15 +4,7 @@ from typing import List, Optional
 app = modal.App("github-actions-example")
 
 
-image = modal.Image.debian_slim().pip_install("requests", "PyPDF2")
-
-
-@app.function(
-    image=image.add_local_file("sample_arxiv.txt", remote_path="/paper_urls.txt")
-)
-def load_paper_urls() -> List[str]:
-    with open("/paper_urls.txt", "r") as f:
-        return [line.strip() for line in f.readlines()]
+image = modal.Image.debian_slim().uv_pip_install("requests", "PyPDF2")
 
 
 @app.cls(image=image, secrets=[modal.Secret.from_name("github")])
@@ -167,7 +159,9 @@ def ete_demo(
 
 @app.local_entrypoint()
 def scrape_many():
-    paper_urls = load_paper_urls.remote()
+    with open("/paper_urls.txt", "r") as f:
+        paper_urls = [line.strip() for line in f.readlines()]
+
     agent = GithubIssueAgent()
 
     print(paper_urls)
