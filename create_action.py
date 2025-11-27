@@ -159,7 +159,7 @@ def ete_demo(
 
 @app.local_entrypoint()
 def scrape_many():
-    with open("/paper_urls.txt", "r") as f:
+    with open("sample_arxiv.txt", "r") as f:
         paper_urls = [line.strip() for line in f.readlines()]
 
     agent = GithubIssueAgent()
@@ -169,7 +169,6 @@ def scrape_many():
     extracted_urls = agent.extract_gh_links.map(
         paper_urls, return_exceptions=True, wrap_returned_exceptions=False
     )
-    # Flatten list of lists to a single list
     extracted_urls = [url for url_list in extracted_urls for url in url_list]
     print(f"Extracted {len(extracted_urls)} urls")
     print(extracted_urls)
