@@ -4,6 +4,7 @@ from typing import List, Optional
 app = modal.App("github-actions-example")
 
 
+# TODO: Update dependencies
 image = modal.Image.debian_slim().uv_pip_install("requests", "PyPDF2")
 
 
@@ -12,6 +13,7 @@ class GithubIssueAgent:
     @modal.method()
     def extract_gh_links(self, url) -> List[str]:
         """Extract all GitHub links from a PDF URL"""
+        # TODO: Implement
         import re
         import urllib.request
         import io
@@ -66,7 +68,7 @@ class GithubIssueAgent:
     @modal.method()
     def check_hugging_face_weights(self) -> bool:
         # huggingface.co/minimaxai/minimax-m1-80k
-        # TODO: implement
+        # TODO: Implement
 
         return False
 
@@ -119,29 +121,27 @@ class GithubIssueAgent:
 @app.function(image=image)
 def ete_demo(
     sample_repository_url: str = "https://github.com/modal-projects/gh-issues-agent",
+    dry_run: bool = True,
 ):
     """Sample ETE demo flow - uses sample paper urls and overrides for testing"""
-    paper_urls = [
-        "https://proceedings.neurips.cc/paper_files/paper/2024/file/71c3451f6cd6a4f82bb822db25cea4fd-Paper-Conference.pdf"
-    ]
+    paper_url = "https://proceedings.neurips.cc/paper_files/paper/2024/file/71c3451f6cd6a4f82bb822db25cea4fd-Paper-Conference.pdf"
     agent = GithubIssueAgent()
 
-    extracted_urls = agent.extract_gh_links.map(
-        paper_urls, return_exceptions=True, wrap_returned_exceptions=False
-    )
-    extracted_urls = [url for url_list in extracted_urls for url in url_list]
+    extracted_urls = agent.extract_gh_links.remote(paper_url)
     print(f"Extracted {len(extracted_urls)} urls")
     print(extracted_urls)
 
     ## Override for testing
-    extracted_urls = [sample_repository_url]
-    print(f"Overriding with {', '.join(extracted_urls)}")
+    if dry_run:
+        extracted_urls = [sample_repository_url]
+        print(f"Overriding with {', '.join(extracted_urls)}")
 
     github_configs = agent.parse_gh_config.map(
         extracted_urls, return_exceptions=True, wrap_returned_exceptions=False
     )
+    github_configs_list = [config for config in github_configs if config is not None]
     results = agent.post_gh_issue.starmap(
-        github_configs, return_exceptions=True, wrap_returned_exceptions=False
+        github_configs_list, return_exceptions=True, wrap_returned_exceptions=False
     )
     total_success = 0
     total_failure = 0
@@ -158,14 +158,15 @@ def ete_demo(
 
 
 @app.local_entrypoint()
-def scrape_many():
-    with open("/paper_urls.txt", "r") as f:
+def scrape_many_demo():
+    with open("/sample_arxiv.txt", "r") as f:
         paper_urls = [line.strip() for line in f.readlines()]
 
     agent = GithubIssueAgent()
 
     print(paper_urls)
 
+    # TODO: Implement with job queue for better error handling
     extracted_urls = agent.extract_gh_links.map(
         paper_urls, return_exceptions=True, wrap_returned_exceptions=False
     )
